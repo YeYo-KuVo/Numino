@@ -54,6 +54,46 @@
 
 
     .muted { color: #666; }
+
+    .controls { display: flex; gap: 10px; align-items: center; margin: 10px 0 14px; }
+    .controls button { padding: 8px 12px; border-radius: 10px; border: 1px solid #ccc; background: #fff; font-weight: 700; }
+    .controls button:active { transform: translateY(1px); }
+
+    .cell.selected { outline: 3px solid #111; outline-offset: 0px; }
+    .cell.locked { opacity: 0.95; }
+
+    .pad { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+
+    .num-btn {
+      width: 44px; height: 44px; border-radius: 999px;
+      border: 2px solid #bdbdbd; background: #fff;
+      font-weight: 800; font-size: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .num-btn.disabled { opacity: 0.35; }
+    .num-btn[disabled] { cursor: not-allowed; }
+
+    .swatch {
+      width: 40px; height: 40px;
+      border-radius: 6px;
+      border: 2px solid #bdbdbd;
+      position: relative;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #fff;
+    }
+    .swatch.disabled { opacity: 0.35; }
+    .swatch .xmark {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #111;
+      font-size: 18px;
+    }
+
+    .pad-label { text-align: center; font-weight: 700; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -63,11 +103,42 @@
   <div id="list">Loading…</div>
 
   <h2>Play</h2>
+
+  <div class="controls">
+    <button id="btnUndo" type="button">Undo</button>
+    <button id="btnLock" type="button">Lock</button>
+    <button id="btnReset" type="button">Reset</button>
+  </div>
+
   <div id="play" class="muted">Select a puzzle above.</div>
+
+  <div class="pad-label">Numbers</div>
+  <div id="numPad" class="pad"></div>
+
+  <div class="pad-label">Colors</div>
+  <div id="colorPad" class="pad"></div>
 
   <script>
     const listEl = document.getElementById("list");
     const playEl = document.getElementById("play");
+
+    const numPadEl = document.getElementById("numPad");
+    const colorPadEl = document.getElementById("colorPad");
+    const btnUndo = document.getElementById("btnUndo");
+    const btnLock = document.getElementById("btnLock");
+    const btnReset = document.getElementById("btnReset");
+
+    let currentPuzzle = null;
+    let currentGivenMap = null;
+    let playerNums = null; // rows x cols (null or number)
+    let playerCols = null; // rows x cols (null or palette code)
+    let selected = null;   // {r,c} or null
+
+    // History of edits for undo
+    // entry: {r,c, prevNum, prevCol, nextNum, nextCol}
+    let history = [];
+    let lockIndex = 0;      // cannot undo below this length
+    let isLocked = false;
 
     // Map palette codes to display colors (tweak later to match final art direction)
     const COLOR_HEX = {
@@ -90,14 +161,162 @@
     }
 
     function buildGivenMap(givens) {
-      const m = new Map(); // key "r,c" -> {num, col}
+      const m = new Map(); // key "r,c" -> {num, col, isGiven:true}
       (givens || []).forEach(g => {
-        m.set(`${g.r},${g.c}`, { num: g.num ?? null, col: g.col ?? null });
+        m.set(`${g.r},${g.c}`, { num: g.num ?? null, col: g.col ?? null, isGiven: true });
       });
       return m;
     }
 
+    function keyOf(r, c) { return `${r},${c}`; }
+
+    function initPlayerState(p) {
+      playerNums = Array.from({ length: p.grid.rows }, () => Array.from({ length: p.grid.cols }, () => null));
+      playerCols = Array.from({ length: p.grid.rows }, () => Array.from({ length: p.grid.cols }, () => null));
+      selected = null;
+      history = [];
+      lockIndex = 0;
+      isLocked = false;
+      btnLock.textContent = "Lock";
+    }
+
+    function setSelected(r, c) {
+      if (!currentPuzzle) return;
+      const given = currentGivenMap.get(keyOf(r, c));
+      if (given?.isGiven) return; // locked
+      selected = { r, c };
+      renderPuzzle(currentPuzzle);
+    }
+
+    function applyEdit(r, c, nextNum, nextCol) {
+      if (!currentPuzzle) return;
+      const given = currentGivenMap.get(keyOf(r, c));
+      if (given?.isGiven) return;
+
+      const prevNum = playerNums[r][c];
+      const prevCol = playerCols[r][c];
+
+      // No-op guard
+      if (prevNum === nextNum && prevCol === nextCol) return;
+
+      playerNums[r][c] = nextNum;
+      playerCols[r][c] = nextCol;
+
+      history.push({ r, c, prevNum, prevCol, nextNum, nextCol });
+      renderPuzzle(currentPuzzle);
+    }
+
+    function undoOne() {
+      if (history.length <= lockIndex) return;
+      const last = history.pop();
+      playerNums[last.r][last.c] = last.prevNum;
+      playerCols[last.r][last.c] = last.prevCol;
+      renderPuzzle(currentPuzzle);
+    }
+
+    function resetAll() {
+      if (!currentPuzzle) return;
+      initPlayerState(currentPuzzle);
+      renderPuzzle(currentPuzzle);
+    }
+
+    function toggleLock() {
+      if (!currentPuzzle) return;
+      if (!isLocked) {
+        isLocked = true;
+        lockIndex = history.length;
+        btnLock.textContent = "Locked";
+      } else {
+        isLocked = false;
+        lockIndex = 0;
+        btnLock.textContent = "Lock";
+      }
+    }
+
+    btnUndo.onclick = () => undoOne();
+    btnReset.onclick = () => resetAll();
+    btnLock.onclick = () => toggleLock();
+
+    function renderNumberPad(p) {
+      const allowed = new Set(p.allowed?.numbers ?? []);
+
+      numPadEl.innerHTML = "";
+      for (let n = 0; n <= 8; n++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "num-btn";
+
+        const isClear = (n === 0);
+        const enabled = isClear || allowed.has(n);
+
+        if (!enabled) {
+          btn.textContent = "X";
+          btn.disabled = true;
+          btn.classList.add("disabled");
+        } else {
+          btn.textContent = String(n);
+          btn.disabled = false;
+          btn.onclick = () => {
+            if (!selected) return;
+            const r = selected.r, c = selected.c;
+            const nextNum = isClear ? null : n;
+            applyEdit(r, c, nextNum, playerCols[r][c]);
+          };
+        }
+
+        numPadEl.appendChild(btn);
+      }
+    }
+
+    function renderColorPad(p) {
+      const allowed = new Set(p.allowed?.colors ?? []);
+
+      colorPadEl.innerHTML = "";
+
+      // First swatch = clear
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "swatch";
+      clearBtn.style.background = "#ffffff";
+      clearBtn.onclick = () => {
+        if (!selected) return;
+        const r = selected.r, c = selected.c;
+        applyEdit(r, c, playerNums[r][c], null);
+      };
+      colorPadEl.appendChild(clearBtn);
+
+      // Then all known colors in the map
+      Object.keys(COLOR_HEX).forEach(code => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "swatch";
+        btn.style.background = COLOR_HEX[code];
+
+        if (!allowed.has(code)) {
+          btn.disabled = true;
+          btn.classList.add("disabled");
+          const x = document.createElement("div");
+          x.className = "xmark";
+          x.textContent = "X";
+          btn.appendChild(x);
+        } else {
+          btn.onclick = () => {
+            if (!selected) return;
+            const r = selected.r, c = selected.c;
+            applyEdit(r, c, playerNums[r][c], code);
+          };
+        }
+
+        colorPadEl.appendChild(btn);
+      });
+    }
+
     function renderPuzzle(p) {
+      currentPuzzle = p;
+      currentGivenMap = buildGivenMap(p.givens);
+      if (!playerNums || !playerCols) {
+        initPlayerState(p);
+      }
       const rows = p.grid.rows;
       const cols = p.grid.cols;
       const nums = (p.allowed?.numbers ?? []).join(", ");
@@ -106,7 +325,7 @@
 
       const rowSums = p.constraints?.row_sums ?? [];
       const colSums = p.constraints?.col_sums ?? [];
-      const givenMap = buildGivenMap(p.givens);
+      const givenMap = currentGivenMap;
 
       // Build layout: (rows+1) x (cols+2)
       // [0,0] blank | [0,1..cols] col sums | [0, cols+1] blank
@@ -121,9 +340,6 @@
           <div><strong>Numbers:</strong> ${nums}</div>
           <div><strong>Colors:</strong> ${colsList}</div>
           <div><strong>Bias:</strong> ${bias}</div>
-          <div class="muted" style="margin-top:8px;">
-            (Step 1) Rendering only. Next step: interactive tools + undo.
-          </div>
         </div>
       `;
 
@@ -155,23 +371,32 @@
 
         // Cells
         for (let c = 0; c < cols; c++) {
-          const key = `${r},${c}`;
+          const key = keyOf(r, c);
           const given = givenMap.get(key);
 
           const cell = document.createElement("div");
           cell.className = "cell";
-          if (given) cell.classList.add("given");
 
-          const num = given?.num ?? null;
-          const colCode = given?.col ?? null;
+          const isGiven = !!given?.isGiven;
+          if (isGiven) cell.classList.add("given");
 
-          // number text (no letters)
+          if (selected && selected.r === r && selected.c === c) {
+            cell.classList.add("selected");
+          }
+
+          // Determine what to display: givens override player state
+          const num = isGiven ? (given.num ?? null) : playerNums[r][c];
+          const colCode = isGiven ? (given.col ?? null) : playerCols[r][c];
+
           cell.textContent = (num === null ? "" : String(num));
 
-          // background color fill (no letter)
           if (colCode && COLOR_HEX[colCode]) {
             cell.style.background = COLOR_HEX[colCode];
+          } else {
+            cell.style.background = "#ffffff";
           }
+
+          cell.onclick = () => setSelected(r, c);
 
           add(cell);
         }
@@ -191,6 +416,8 @@
       wrap.className = "board-wrap";
       wrap.appendChild(grid);
       playEl.appendChild(wrap);
+      renderNumberPad(p);
+      renderColorPad(p);
     }
 
     fetch("puzzles.json")
@@ -210,7 +437,13 @@
           const btn = document.createElement("button");
           btn.className = "puzzle-btn";
           btn.textContent = lineFor(p);
-          btn.onclick = () => renderPuzzle(p);
+          btn.onclick = () => {
+            // Selecting a new puzzle resets player state for now
+            playerNums = null;
+            playerCols = null;
+            selected = null;
+            renderPuzzle(p);
+          };
           li.appendChild(btn);
           ul.appendChild(li);
         });
