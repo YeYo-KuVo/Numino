@@ -509,14 +509,15 @@
       // Move controls closer to the grid (Play title → ID → controls → grid)
       playEl.appendChild(controlsEl);
 
-      // Completion indicator (always present; hidden until complete)
+      // Completion indicator: only reserve space when complete
       const complete = isComplete(p);
       const ok = complete ? sumsMatch(p) : false;
 
       const statusDiv = document.createElement("div");
       statusDiv.className = "status";
-      statusDiv.textContent = complete ? (ok ? "✓" : "✕") : "";
-      statusDiv.style.visibility = complete ? "visible" : "hidden";
+      statusDiv.textContent = ok ? "✓" : "✕";
+      // Do not reserve any space until the puzzle is complete
+      statusDiv.style.display = complete ? "flex" : "none";
       playEl.appendChild(statusDiv);
 
       const wrap = document.createElement("div");
