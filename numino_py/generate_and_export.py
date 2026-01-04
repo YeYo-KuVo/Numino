@@ -37,9 +37,9 @@ def append_private_solution(
 def main():
     # ---- configure ONE puzzle here ----
     cfg = CalibrationResult(
-        rows=6,
-        cols=6,
-        numbers=[1, 2, 3, 4],
+        rows=4,
+        cols=4,
+        numbers=[1, 2, 3],
         colors=["B", "Y", "V"],
         balance="BALANCED",
         seed=12345,
