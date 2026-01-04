@@ -7,18 +7,72 @@
 </head>
 <body>
   <h1>Numino</h1>
-  <p>GitHub Pages is working.</p>
+
+  <h2>Puzzles</h2>
+  <div id="list">Loading…</div>
+
+  <hr />
+
+  <h2>Selected puzzle</h2>
+  <div id="details">None selected.</div>
 
   <script>
+    const listEl = document.getElementById("list");
+    const detailsEl = document.getElementById("details");
+
+    function formatPuzzleLine(p) {
+      const rows = p.grid?.rows ?? "?";
+      const cols = p.grid?.cols ?? "?";
+      const nums = (p.allowed?.numbers ?? []).join(", ");
+      const colsList = (p.allowed?.colors ?? []).join(" ");
+      const bias = p.bias ?? "—";
+      return `${p.id} — ${rows}×${cols} — Numbers: ${nums} — Colors: ${colsList} — Bias: ${bias}`;
+    }
+
+    function showDetails(p) {
+      const rows = p.grid?.rows ?? "?";
+      const cols = p.grid?.cols ?? "?";
+      const nums = (p.allowed?.numbers ?? []).join(", ");
+      const colsList = (p.allowed?.colors ?? []).join(" ");
+      const bias = p.bias ?? "—";
+
+      detailsEl.innerHTML = `
+        <div><strong>ID:</strong> ${p.id}</div>
+        <div><strong>Grid:</strong> ${rows}×${cols}</div>
+        <div><strong>Numbers:</strong> ${nums}</div>
+        <div><strong>Colors:</strong> ${colsList}</div>
+        <div><strong>Bias:</strong> ${bias}</div>
+        <p style="margin-top:12px;"><em>Next step: this is where Play UI will render the grid.</em></p>
+      `;
+    }
+
     fetch("puzzles.json")
       .then(r => r.json())
       .then(data => {
-        const p = document.createElement("pre");
-        p.textContent = JSON.stringify(data, null, 2);
-        document.body.appendChild(p);
+        const puzzles = data.puzzles || [];
+        if (!puzzles.length) {
+          listEl.textContent = "No puzzles found in puzzles.json";
+          return;
+        }
+
+        listEl.innerHTML = "";
+        const ul = document.createElement("ul");
+
+        puzzles.forEach(p => {
+          const li = document.createElement("li");
+          const btn = document.createElement("button");
+          btn.textContent = formatPuzzleLine(p);
+          btn.style.display = "block";
+          btn.style.margin = "6px 0";
+          btn.onclick = () => showDetails(p);
+          li.appendChild(btn);
+          ul.appendChild(li);
+        });
+
+        listEl.appendChild(ul);
       })
       .catch(err => {
-        document.body.append("Failed to load puzzles.json");
+        listEl.textContent = "Failed to load puzzles.json";
         console.error(err);
       });
   </script>
