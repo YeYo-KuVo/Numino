@@ -52,14 +52,6 @@
       border: 2px solid #333;
     }
 
-    .cell .coltag {
-      position: absolute;
-      bottom: 3px;
-      right: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      opacity: 0.7;
-    }
 
     .muted { color: #666; }
   </style>
@@ -76,6 +68,17 @@
   <script>
     const listEl = document.getElementById("list");
     const playEl = document.getElementById("play");
+
+    // Map palette codes to display colors (tweak later to match final art direction)
+    const COLOR_HEX = {
+      "B": "#6f8ea8",
+      "R": "#b96b5f",
+      "Y": "#e6cf6a",
+      "V": "#9bb36c",
+      "P": "#9b8cc0",
+      "G": "#8a8a8a",
+      "O": "#ffa94d"
+    };
 
     function lineFor(p) {
       const rows = p.grid?.rows ?? "?";
@@ -160,15 +163,14 @@
           if (given) cell.classList.add("given");
 
           const num = given?.num ?? null;
-          const colTag = given?.col ?? null;
+          const colCode = given?.col ?? null;
 
+          // number text (no letters)
           cell.textContent = (num === null ? "" : String(num));
 
-          if (colTag) {
-            const tag = document.createElement("div");
-            tag.className = "coltag";
-            tag.textContent = colTag;
-            cell.appendChild(tag);
+          // background color fill (no letter)
+          if (colCode && COLOR_HEX[colCode]) {
+            cell.style.background = COLOR_HEX[colCode];
           }
 
           add(cell);
