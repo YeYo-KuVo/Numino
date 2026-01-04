@@ -5,9 +5,9 @@
   <title>Numino</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
-    h1 { margin: 0 0 8px; }
-    h2 { margin: 18px 0 10px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; }
+    .container { max-width: 420px; margin: 0 auto; padding: 16px; }
+    h1, h2 { text-align: center; }
     button { cursor: pointer; }
 
     .puzzle-btn { display: block; margin: 6px 0; padding: 8px 10px; width: 100%; text-align: left; }
@@ -94,9 +94,25 @@
     }
 
     .pad-label { text-align: center; font-weight: 700; margin-top: 10px; }
+
+    #list ul { padding-left: 0; list-style: none; }
+    #list li { margin: 8px 0; }
+    .puzzle-btn { width: 100%; }
+
+    .controls { justify-content: center; }
+
+    .play-area { display: flex; flex-direction: column; align-items: center; }
+    .meta { width: 100%; text-align: left; }
+
+    /* Force number pad into two rows (5 columns) */
+    #numPad { display: grid; grid-template-columns: repeat(5, 52px); justify-content: center; }
+    .num-btn { width: 52px; height: 52px; font-size: 18px; }
+
+    #colorPad { justify-content: center; }
   </style>
 </head>
 <body>
+  <div class="container">
   <h1>Numino</h1>
 
   <h2>Puzzles</h2>
@@ -147,8 +163,7 @@
       "Y": "#e6cf6a",
       "V": "#9bb36c",
       "P": "#9b8cc0",
-      "G": "#8a8a8a",
-      "O": "#ffa94d"
+      "G": "#8a8a8a"
     };
 
     function lineFor(p) {
@@ -255,7 +270,7 @@
       const allowed = new Set(p.allowed?.numbers ?? []);
 
       numPadEl.innerHTML = "";
-      for (let n = 0; n <= 8; n++) {
+      for (let n = 0; n <= 9; n++) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "num-btn";
@@ -350,9 +365,6 @@
       const metaHtml = `
         <div class="meta">
           <div><strong>ID:</strong> ${p.id}</div>
-          <div><strong>Grid:</strong> ${rows}×${cols}</div>
-          <div><strong>Numbers:</strong> ${nums}</div>
-          <div><strong>Colors:</strong> ${colsList}</div>
           <div><strong>Bias:</strong> ${bias}</div>
         </div>
       `;
@@ -426,7 +438,7 @@
       }
 
       playEl.innerHTML = "";
-      playEl.className = "";
+      playEl.className = "play-area";
       playEl.insertAdjacentHTML("beforeend", metaHtml);
 
       const wrap = document.createElement("div");
@@ -472,5 +484,6 @@
         console.error(err);
       });
   </script>
+  </div>
 </body>
 </html>
