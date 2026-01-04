@@ -136,7 +136,7 @@
 
   <h2>Play</h2>
 
-  <div class="controls">
+  <div class="controls" id="controls">
     <button id="btnUndo" type="button">Undo</button>
     <button id="btnLock" type="button">Lock</button>
     <button id="btnReset" type="button">Reset</button>
@@ -159,6 +159,7 @@
     const btnUndo = document.getElementById("btnUndo");
     const btnLock = document.getElementById("btnLock");
     const btnReset = document.getElementById("btnReset");
+    const controlsEl = document.getElementById("controls");
 
     let currentPuzzle = null;
     let currentGivenMap = null;
@@ -504,6 +505,10 @@
       playEl.innerHTML = "";
       playEl.className = "play-area";
       playEl.insertAdjacentHTML("beforeend", metaHtml);
+
+      // Move controls closer to the grid (Play title → ID → controls → grid)
+      playEl.appendChild(controlsEl);
+
       // Completion indicator (always present; hidden until complete)
       const complete = isComplete(p);
       const ok = complete ? sumsMatch(p) : false;
