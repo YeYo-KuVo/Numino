@@ -6,6 +6,7 @@ import random
 from collections import deque
 
 from solver import Puzzle, Coord, Val
+from bias import choose_block_sizes_biased
 
 
 @dataclass
@@ -13,16 +14,16 @@ class ConstructConfig:
     rows: int
     cols: int
     palette: List[str]          # e.g. ["R","Y","B"]
-    numbers: List[int]          # e.g. [1,2,3,5]
+    numbers: List[int]          # e.g. [1,2,3,4,5]
     seed: int
 
-    # NEW:
-    style: str = "BALANCED"     # BALANCED | SMALL_BLOCKY | LARGE_BLOCKY | UNIFORM
+    # NEW: Bias mode (matches your UI)
+    style: str = "BALANCED"     # SMALL | BALANCED | BIG | UNIFORM
 
     require_all_numbers: bool = True
     require_all_colors: bool = True
 
-    max_attempts: int = 200
+    max_attempts: int = 300     # restarts for partition+color
 
 
 def _neighbors4(r: int, c: int, R: int, C: int) -> List[Coord]:
@@ -35,77 +36,25 @@ def _neighbors4(r: int, c: int, R: int, C: int) -> List[Coord]:
 
 
 def _area_feasible(rows: int, cols: int, required_numbers: Sequence[int]) -> bool:
+    # If you require at least one block of each number, you need at least sum(numbers) cells.
     return rows * cols >= sum(required_numbers)
 
 
-def _weighted_choice(rng: random.Random, items: List[int], weights: List[float]) -> int:
-    # Simple weighted random choice (no numpy)
-    total = sum(weights)
-    r = rng.random() * total
-    acc = 0.0
-    for item, w in zip(items, weights):
-        acc += w
-        if r <= acc:
-            return item
-    return items[-1]
-
-
-def _choose_block_sizes(rng: random.Random, area: int, numbers: List[int], require_all: bool, style: str) -> Optional[List[int]]:
+def _find_all_shapes(
+    start: Coord,
+    size: int,
+    free_cells: Set[Coord],
+    R: int,
+    C: int,
+    limit: int,
+    rng: random.Random
+) -> List[List[Coord]]:
     """
-    Choose a multiset of block sizes whose sum == area.
-    If require_all is True, include each number at least once.
-    Style biases how remaining sizes are chosen.
+    Generate up to `limit` connected shapes of `size` starting at `start`,
+    using randomized compact growth.
     """
-    nums = sorted(numbers)
-    blocks: List[int] = []
-    remaining = area
-
-    if require_all:
-        base = list(nums)
-        total = sum(base)
-        if total > area:
-            return None
-        blocks.extend(base)
-        remaining -= total
-
-    style = style.upper().strip()
-    guard = 8000
-
-    while remaining > 0 and guard > 0:
-        guard -= 1
-        fits = [n for n in nums if n <= remaining]
-        if not fits:
-            return None
-
-        if style == "UNIFORM":
-            pick = rng.choice(fits)
-
-        else:
-            # weights by style
-            if style == "SMALL_BLOCKY":
-                # favor smaller n (e.g. 1 gets big weight)
-                weights = [1.0 / (n ** 1.25) for n in fits]
-            elif style == "LARGE_BLOCKY":
-                # favor larger n strongly
-                weights = [(n ** 1.75) for n in fits]
-            else:  # BALANCED (default)
-                # mild preference to larger sizes, but not extreme
-                weights = [(n ** 1.05) for n in fits]
-
-            pick = _weighted_choice(rng, fits, weights)
-
-        blocks.append(pick)
-        remaining -= pick
-
-    if remaining != 0:
-        return None
-
-    rng.shuffle(blocks)
-    return blocks
-
-
-def _find_all_shapes(start: Coord, size: int, grid_free: Set[Coord], R: int, C: int, limit: int, rng: random.Random) -> List[List[Coord]]:
     shapes: List[List[Coord]] = []
+
     for _ in range(limit):
         shape = [start]
         used = {start}
@@ -113,17 +62,19 @@ def _find_all_shapes(start: Coord, size: int, grid_free: Set[Coord], R: int, C: 
         while len(shape) < size:
             cand: List[Coord] = []
             seen = set()
+
             for (r, c) in shape:
                 for nb in _neighbors4(r, c, R, C):
                     if nb in seen:
                         continue
                     seen.add(nb)
-                    if nb in grid_free and nb not in used:
+                    if nb in free_cells and nb not in used:
                         cand.append(nb)
 
             if not cand:
                 break
 
+            # compactness bias: prefer cells that touch current shape more
             def score(cell: Coord) -> int:
                 rr, cc = cell
                 s = 0
@@ -144,11 +95,23 @@ def _find_all_shapes(start: Coord, size: int, grid_free: Set[Coord], R: int, C: 
     return shapes
 
 
-def _partition_into_blocks(rng: random.Random, R: int, C: int, block_sizes: List[int]) -> Optional[Tuple[Dict[Coord, int], Dict[int, int]]]:
+def _partition_into_blocks(
+    rng: random.Random,
+    R: int,
+    C: int,
+    block_sizes: List[int]
+) -> Optional[Tuple[Dict[Coord, int], Dict[int, int]]]:
+    """
+    Partition the grid into connected blocks with specified sizes.
+    Returns:
+      - cell_to_block: (r,c) -> block_id
+      - block_size: block_id -> size
+    """
     all_cells: Set[Coord] = {(r, c) for r in range(R) for c in range(C)}
     cell_to_block: Dict[Coord, int] = {}
     block_size: Dict[int, int] = {}
 
+    # Place larger blocks first (usually easier)
     sizes = sorted(block_sizes, reverse=True)
 
     def next_free_cell() -> Optional[Coord]:
@@ -163,18 +126,19 @@ def _partition_into_blocks(rng: random.Random, R: int, C: int, block_sizes: List
         if i == len(sizes):
             return True
 
-        free_cells = all_cells - set(cell_to_block.keys())
+        free = all_cells - set(cell_to_block.keys())
         start = next_free_cell()
         if start is None:
             return False
 
         size = sizes[i]
-        if size > len(free_cells):
+        if size > len(free):
             return False
 
-        shapes = _find_all_shapes(start, size, free_cells, R, C, limit=60, rng=rng)
+        shapes = _find_all_shapes(start, size, free, R, C, limit=80, rng=rng)
         if not shapes:
             return False
+
         rng.shuffle(shapes)
 
         for shape in shapes:
@@ -194,6 +158,7 @@ def _partition_into_blocks(rng: random.Random, R: int, C: int, block_sizes: List
 
     if not dfs(0):
         return None
+
     return cell_to_block, block_size
 
 
@@ -210,8 +175,18 @@ def _build_block_adjacency(cell_to_block: Dict[Coord, int], R: int, C: int) -> D
     return adj
 
 
-def _color_blocks_backtracking(rng: random.Random, adj: Dict[int, Set[int]], palette: List[str], require_all_colors: bool) -> Optional[Dict[int, str]]:
+def _color_blocks_backtracking(
+    rng: random.Random,
+    adj: Dict[int, Set[int]],
+    palette: List[str],
+    require_all_colors: bool
+) -> Optional[Dict[int, str]]:
+    """
+    Graph color the blocks so adjacent blocks differ in color.
+    Reuse allowed for non-adjacent blocks.
+    """
     blocks = list(adj.keys())
+    # degree heuristic
     blocks.sort(key=lambda b: len(adj[b]), reverse=True)
 
     color_of: Dict[int, str] = {}
@@ -232,6 +207,7 @@ def _color_blocks_backtracking(rng: random.Random, adj: Dict[int, Set[int]], pal
         cols = palette[:]
         rng.shuffle(cols)
 
+        # If we require all colors, try unused colors first
         if require_all_colors:
             used = set(color_of.values())
             cols = [c for c in cols if c not in used] + [c for c in cols if c in used]
@@ -257,6 +233,11 @@ def _compute_sums_from_solution(sol: Dict[Coord, Val], rows: int, cols: int) -> 
 
 
 def construct_solution(cfg: ConstructConfig) -> Tuple[Dict[Coord, Val], Puzzle]:
+    """
+    Returns:
+      - sol: dict[(r,c)] -> (n,col) full constructed solution
+      - base_puzzle: Puzzle with row/col sums and no givens
+    """
     R, C = cfg.rows, cfg.cols
     area = R * C
     palette = [c.upper() for c in cfg.palette]
@@ -269,39 +250,56 @@ def construct_solution(cfg: ConstructConfig) -> Tuple[Dict[Coord, Val], Puzzle]:
         )
 
     rng = random.Random(cfg.seed)
+    style = (cfg.style or "BALANCED").upper().strip()
 
     for _attempt in range(cfg.max_attempts):
-        block_sizes = _choose_block_sizes(
-            rng, area, numbers,
-            require_all=cfg.require_all_numbers,
-            style=cfg.style
+        # 1) choose block sizes with bias
+        block_sizes = choose_block_sizes_biased(
+            area=area,
+            allowed_numbers=numbers,
+            rng=rng,
+            mode=style,  # SMALL/BALANCED/BIG/UNIFORM
+            require_all_numbers=cfg.require_all_numbers,
+            max_tries=2000,
         )
         if not block_sizes:
             continue
 
+        # 2) partition grid into blocks (numbers only)
         part = _partition_into_blocks(rng, R, C, block_sizes)
         if not part:
             continue
         cell_to_block, block_size = part
 
+        # Require each number used at least once as a block
+        if cfg.require_all_numbers:
+            used_block_sizes = set(block_size.values())
+            if not set(numbers).issubset(used_block_sizes):
+                continue
+
+        # 3) build adjacency and color blocks
         adj = _build_block_adjacency(cell_to_block, R, C)
-        colors = _color_blocks_backtracking(rng, adj, palette, require_all_colors=cfg.require_all_colors)
+
+        # require_all_colors is only feasible if blocks >= colors
+        require_colors = cfg.require_all_colors and (len(block_size) >= len(palette))
+
+        colors = _color_blocks_backtracking(rng, adj, palette, require_all_colors=require_colors)
         if not colors:
             continue
 
+        # If require_all_colors, ensure all present
+        if require_colors:
+            if not set(palette).issubset(set(colors.values())):
+                continue
+
+        # 4) build solution dict: each cell gets (block_size, block_color)
         sol: Dict[Coord, Val] = {}
         for (r, c), b in cell_to_block.items():
             n = block_size[b]
             col = colors[b]
             sol[(r, c)] = (n, col)
 
-        if cfg.require_all_numbers:
-            if not set(numbers).issubset(set(block_size.values())):
-                continue
-        if cfg.require_all_colors:
-            if not set(palette).issubset(set(colors.values())):
-                continue
-
+        # 5) compute sums and return base puzzle
         row_sums, col_sums = _compute_sums_from_solution(sol, R, C)
         base_puzzle = Puzzle(
             rows=R,
