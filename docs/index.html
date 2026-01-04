@@ -432,12 +432,6 @@
         </div>
       `;
 
-      const complete = isComplete(p);
-      const ok = complete ? sumsMatch(p) : false;
-
-      const statusHtml = complete
-        ? `<div class="status">${ok ? "✓" : "✕"}</div>`
-        : ``;
 
       const grid = document.createElement("div");
       grid.className = "grid";
@@ -510,7 +504,15 @@
       playEl.innerHTML = "";
       playEl.className = "play-area";
       playEl.insertAdjacentHTML("beforeend", metaHtml);
-      if (statusHtml) playEl.insertAdjacentHTML("beforeend", statusHtml);
+      // Completion indicator (always present; hidden until complete)
+      const complete = isComplete(p);
+      const ok = complete ? sumsMatch(p) : false;
+
+      const statusDiv = document.createElement("div");
+      statusDiv.className = "status";
+      statusDiv.textContent = complete ? (ok ? "✓" : "✕") : "";
+      statusDiv.style.visibility = complete ? "visible" : "hidden";
+      playEl.appendChild(statusDiv);
 
       const wrap = document.createElement("div");
       wrap.className = "board-wrap";
