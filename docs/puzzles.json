@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "puzzles": [
+    {
+      "id": "2026-01-03",
+      "grid": {
+        "rows": 6,
+        "cols": 6
+      },
+      "allowed": {
+        "numbers": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "colors": [
+          "B",
+          "Y",
+          "V"
+        ]
+      },
+      "bias": "BALANCED",
+      "difficulty": 0,
+      "constraints": {
+        "row_sums": [
+          22,
+          22,
+          15,
+          14,
+          12,
+          7
+        ],
+        "col_sums": [
+          18,
+          16,
+          15,
+          15,
+          13,
+          15
+        ]
+      },
+      "givens": [
+        {
+          "r": 0,
+          "c": 0,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 0,
+          "c": 1,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 0,
+          "c": 4,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 1,
+          "c": 0,
+          "num": 4,
+          "col": "B"
+        },
+        {
+          "r": 1,
+          "c": 1,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 1,
+          "c": 3,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 2,
+          "c": 0,
+          "num": 3,
+          "col": "Y"
+        },
+        {
+          "r": 2,
+          "c": 1,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 2,
+          "c": 2,
+          "num": null,
+          "col": "V"
+        },
+        {
+          "r": 2,
+          "c": 4,
+          "num": 2,
+          "col": "V"
+        },
+        {
+          "r": 2,
+          "c": 5,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 3,
+          "c": 0,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 3,
+          "c": 1,
+          "num": 2,
+          "col": "B"
+        },
+        {
+          "r": 3,
+          "c": 2,
+          "num": 2,
+          "col": null
+        },
+        {
+          "r": 3,
+          "c": 3,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 3,
+          "c": 5,
+          "num": 3,
+          "col": "Y"
+        },
+        {
+          "r": 4,
+          "c": 0,
+          "num": 2,
+          "col": "V"
+        },
+        {
+          "r": 4,
+          "c": 1,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 4,
+          "c": 2,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 4,
+          "c": 3,
+          "num": 2,
+          "col": null
+        },
+        {
+          "r": 5,
+          "c": 0,
+          "num": null,
+          "col": "V"
+        },
+        {
+          "r": 5,
+          "c": 3,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 5,
+          "c": 4,
+          "num": 1,
+          "col": null
+        },
+        {
+          "r": 5,
+          "c": 5,
+          "num": null,
+          "col": "Y"
+        }
+      ]
+    }
+  ]
+}
