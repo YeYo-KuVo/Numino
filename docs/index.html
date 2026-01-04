@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Numino</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+  <h1>Numino</h1>
+  <p>GitHub Pages is working.</p>
+
+  <script>
+    fetch("puzzles.json")
+      .then(r => r.json())
+      .then(data => {
+        const p = document.createElement("pre");
+        p.textContent = JSON.stringify(data, null, 2);
+        document.body.appendChild(p);
+      })
+      .catch(err => {
+        document.body.append("Failed to load puzzles.json");
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
