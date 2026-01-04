@@ -1,6 +1,6 @@
 # generate_and_export.py
 
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 import json
 
@@ -35,17 +35,23 @@ def append_private_solution(
 
 
 def main():
-    # ---- configure ONE puzzle here ----
+    # Auto puzzle ID based on current time (YYYY-MM-DD-HHMM)
+    now = datetime.now()
+
+    puzzle_id = now.strftime("%Y-%m-%d-%H%M")
+
+    # Use the same timestamp (without separators) as the seed
+    seed_int = int(now.strftime("%Y%m%d%H%M"))
+
     cfg = CalibrationResult(
         rows=4,
         cols=4,
         numbers=[1, 2, 3],
         colors=["B", "Y", "V"],
         balance="BALANCED",
-        seed=12345,
+        seed=seed_int,
     )
 
-    puzzle_id = date.today().isoformat()
 
     puzzle, solution, bias, _pid, difficulty = generate_puzzle_from_calibration(cfg)
 

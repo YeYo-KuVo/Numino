@@ -283,6 +283,115 @@
           "col": "V"
         }
       ]
+    },
+    {
+      "id": "2026-01-03-1740",
+      "grid": {
+        "rows": 4,
+        "cols": 4
+      },
+      "allowed": {
+        "numbers": [
+          1,
+          2,
+          3
+        ],
+        "colors": [
+          "B",
+          "Y",
+          "V"
+        ]
+      },
+      "bias": "BALANCED",
+      "difficulty": 0,
+      "constraints": {
+        "row_sums": [
+          12,
+          12,
+          8,
+          6
+        ],
+        "col_sums": [
+          10,
+          10,
+          10,
+          8
+        ]
+      },
+      "givens": [
+        {
+          "r": 0,
+          "c": 1,
+          "num": 3,
+          "col": null
+        },
+        {
+          "r": 0,
+          "c": 2,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 0,
+          "c": 3,
+          "num": 3,
+          "col": "Y"
+        },
+        {
+          "r": 1,
+          "c": 0,
+          "num": 3,
+          "col": null
+        },
+        {
+          "r": 1,
+          "c": 1,
+          "num": null,
+          "col": "V"
+        },
+        {
+          "r": 1,
+          "c": 2,
+          "num": null,
+          "col": "V"
+        },
+        {
+          "r": 2,
+          "c": 0,
+          "num": 2,
+          "col": null
+        },
+        {
+          "r": 2,
+          "c": 1,
+          "num": null,
+          "col": "V"
+        },
+        {
+          "r": 3,
+          "c": 0,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 3,
+          "c": 1,
+          "num": null,
+          "col": "B"
+        },
+        {
+          "r": 3,
+          "c": 2,
+          "num": 2,
+          "col": null
+        },
+        {
+          "r": 3,
+          "c": 3,
+          "num": null,
+          "col": "B"
+        }
+      ]
     }
   ]
 }
