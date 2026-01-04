@@ -392,6 +392,148 @@
           "col": "B"
         }
       ]
+    },
+    {
+      "id": "2026-01-03-1752",
+      "grid": {
+        "rows": 5,
+        "cols": 5
+      },
+      "allowed": {
+        "numbers": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "colors": [
+          "R",
+          "Y",
+          "P"
+        ]
+      },
+      "bias": "BALANCED",
+      "difficulty": 0,
+      "constraints": {
+        "row_sums": [
+          20,
+          20,
+          19,
+          15,
+          9
+        ],
+        "col_sums": [
+          17,
+          17,
+          16,
+          17,
+          16
+        ]
+      },
+      "givens": [
+        {
+          "r": 0,
+          "c": 0,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 0,
+          "c": 2,
+          "num": 4,
+          "col": "P"
+        },
+        {
+          "r": 1,
+          "c": 0,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 1,
+          "c": 1,
+          "num": 4,
+          "col": "Y"
+        },
+        {
+          "r": 1,
+          "c": 2,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 1,
+          "c": 3,
+          "num": 4,
+          "col": "Y"
+        },
+        {
+          "r": 1,
+          "c": 4,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 2,
+          "c": 0,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 2,
+          "c": 1,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 2,
+          "c": 2,
+          "num": null,
+          "col": "P"
+        },
+        {
+          "r": 2,
+          "c": 3,
+          "num": 3,
+          "col": "R"
+        },
+        {
+          "r": 2,
+          "c": 4,
+          "num": 4,
+          "col": null
+        },
+        {
+          "r": 3,
+          "c": 3,
+          "num": null,
+          "col": "R"
+        },
+        {
+          "r": 4,
+          "c": 1,
+          "num": null,
+          "col": "P"
+        },
+        {
+          "r": 4,
+          "c": 2,
+          "num": null,
+          "col": "Y"
+        },
+        {
+          "r": 4,
+          "c": 3,
+          "num": null,
+          "col": "R"
+        },
+        {
+          "r": 4,
+          "c": 4,
+          "num": null,
+          "col": "P"
+        }
+      ]
     }
   ]
 }

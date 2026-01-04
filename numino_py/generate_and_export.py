@@ -44,10 +44,10 @@ def main():
     seed_int = int(now.strftime("%Y%m%d%H%M"))
 
     cfg = CalibrationResult(
-        rows=4,
-        cols=4,
-        numbers=[1, 2, 3],
-        colors=["B", "Y", "V"],
+        rows=5,
+        cols=5,
+        numbers=[1, 2, 3, 4],
+        colors=["R", "Y", "P"],
         balance="BALANCED",
         seed=seed_int,
     )
