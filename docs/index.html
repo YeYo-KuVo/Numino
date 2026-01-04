@@ -14,6 +14,23 @@
 
     .meta { margin: 10px 0 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; width: 100%; text-align: center; }
     .meta div { margin: 4px 0; }
+    .meta, .meta div { text-align: center; }
+
+    .status {
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 900;
+      margin: 6px auto 12px;
+      background: #f0f0f0;
+      border: 1px solid #d0d0d0;
+      color: #333;
+      user-select: none;
+    }
 
     .board-wrap { display: inline-block; border: 1px solid #ddd; border-radius: 10px; padding: 10px; }
     .grid {
@@ -339,6 +356,54 @@
       });
     }
 
+    function cellState(r, c) {
+      const given = currentGivenMap?.get(keyOf(r, c));
+      const lockNum = !!given?.lockNum;
+      const lockCol = !!given?.lockCol;
+      const num = lockNum ? (given?.num ?? null) : playerNums[r][c];
+      const col = lockCol ? (given?.col ?? null) : playerCols[r][c];
+      return { num, col };
+    }
+
+    function isComplete(p) {
+      for (let r = 0; r < p.grid.rows; r++) {
+        for (let c = 0; c < p.grid.cols; c++) {
+          const { num, col } = cellState(r, c);
+          if (num === null || col === null) return false;
+        }
+      }
+      return true;
+    }
+
+    function sumsMatch(p) {
+      const rowTargets = p.constraints?.row_sums ?? [];
+      const colTargets = p.constraints?.col_sums ?? [];
+
+      // rows
+      for (let r = 0; r < p.grid.rows; r++) {
+        let s = 0;
+        for (let c = 0; c < p.grid.cols; c++) {
+          const { num } = cellState(r, c);
+          if (num === null) return false;
+          s += num;
+        }
+        if (rowTargets[r] != null && s !== rowTargets[r]) return false;
+      }
+
+      // cols
+      for (let c = 0; c < p.grid.cols; c++) {
+        let s = 0;
+        for (let r = 0; r < p.grid.rows; r++) {
+          const { num } = cellState(r, c);
+          if (num === null) return false;
+          s += num;
+        }
+        if (colTargets[c] != null && s !== colTargets[c]) return false;
+      }
+
+      return true;
+    }
+
     function renderPuzzle(p) {
       currentPuzzle = p;
       currentGivenMap = buildGivenMap(p.givens);
@@ -366,6 +431,13 @@
           <div><strong>ID:</strong> ${p.id}</div>
         </div>
       `;
+
+      const complete = isComplete(p);
+      const ok = complete ? sumsMatch(p) : false;
+
+      const statusHtml = complete
+        ? `<div class="status">${ok ? "✓" : "✕"}</div>`
+        : ``;
 
       const grid = document.createElement("div");
       grid.className = "grid";
@@ -438,6 +510,7 @@
       playEl.innerHTML = "";
       playEl.className = "play-area";
       playEl.insertAdjacentHTML("beforeend", metaHtml);
+      if (statusHtml) playEl.insertAdjacentHTML("beforeend", statusHtml);
 
       const wrap = document.createElement("div");
       wrap.className = "board-wrap";
