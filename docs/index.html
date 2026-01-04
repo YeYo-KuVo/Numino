@@ -161,9 +161,19 @@
     }
 
     function buildGivenMap(givens) {
-      const m = new Map(); // key "r,c" -> {num, col, isGiven:true}
+      const m = new Map();
+      // key "r,c" -> {num, col, lockNum, lockCol}
       (givens || []).forEach(g => {
-        m.set(`${g.r},${g.c}`, { num: g.num ?? null, col: g.col ?? null, isGiven: true });
+        const num = (g.num ?? null);
+        const col = (g.col ?? null);
+        m.set(`${g.r},${g.c}`,
+          {
+            num,
+            col,
+            lockNum: num !== null,
+            lockCol: col !== null
+          }
+        );
       });
       return m;
     }
@@ -182,27 +192,31 @@
 
     function setSelected(r, c) {
       if (!currentPuzzle) return;
-      const given = currentGivenMap.get(keyOf(r, c));
-      if (given?.isGiven) return; // locked
       selected = { r, c };
       renderPuzzle(currentPuzzle);
     }
 
     function applyEdit(r, c, nextNum, nextCol) {
       if (!currentPuzzle) return;
-      const given = currentGivenMap.get(keyOf(r, c));
-      if (given?.isGiven) return;
+      const given = currentGivenMap.get(keyOf(r, c)) || { lockNum: false, lockCol: false, num: null, col: null };
+
+      // If both attributes are locked, nothing to edit.
+      if (given.lockNum && given.lockCol) return;
+
+      // Respect locks: keep locked attributes fixed.
+      const effNextNum = given.lockNum ? given.num : nextNum;
+      const effNextCol = given.lockCol ? given.col : nextCol;
 
       const prevNum = playerNums[r][c];
       const prevCol = playerCols[r][c];
 
       // No-op guard
-      if (prevNum === nextNum && prevCol === nextCol) return;
+      if (prevNum === effNextNum && prevCol === effNextCol) return;
 
-      playerNums[r][c] = nextNum;
-      playerCols[r][c] = nextCol;
+      playerNums[r][c] = effNextNum;
+      playerCols[r][c] = effNextCol;
 
-      history.push({ r, c, prevNum, prevCol, nextNum, nextCol });
+      history.push({ r, c, prevNum, prevCol, nextNum: effNextNum, nextCol: effNextCol });
       renderPuzzle(currentPuzzle);
     }
 
@@ -377,16 +391,19 @@
           const cell = document.createElement("div");
           cell.className = "cell";
 
-          const isGiven = !!given?.isGiven;
+          const lockNum = !!given?.lockNum;
+          const lockCol = !!given?.lockCol;
+          const isGiven = lockNum || lockCol;
           if (isGiven) cell.classList.add("given");
+          if (lockNum && lockCol) cell.classList.add("locked");
 
           if (selected && selected.r === r && selected.c === c) {
             cell.classList.add("selected");
           }
 
-          // Determine what to display: givens override player state
-          const num = isGiven ? (given.num ?? null) : playerNums[r][c];
-          const colCode = isGiven ? (given.col ?? null) : playerCols[r][c];
+          // Display: locked attributes come from givens; unlocked from player state
+          const num = lockNum ? (given.num ?? null) : playerNums[r][c];
+          const colCode = lockCol ? (given.col ?? null) : playerCols[r][c];
 
           cell.textContent = (num === null ? "" : String(num));
 
