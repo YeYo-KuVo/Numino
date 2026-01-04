@@ -4,6 +4,65 @@
   <meta charset="UTF-8" />
   <title>Numino</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
+    h1 { margin: 0 0 8px; }
+    h2 { margin: 18px 0 10px; }
+    button { cursor: pointer; }
+
+    .puzzle-btn { display: block; margin: 6px 0; padding: 8px 10px; width: 100%; text-align: left; }
+
+    .meta { margin: 10px 0 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+    .meta div { margin: 4px 0; }
+
+    .board-wrap { display: inline-block; border: 1px solid #ddd; border-radius: 10px; padding: 10px; }
+    .grid {
+      display: grid;
+      gap: 4px;
+      align-items: stretch;
+      justify-items: stretch;
+    }
+
+    .sum {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      min-width: 42px;
+      min-height: 42px;
+      border-radius: 8px;
+      background: #f5f5f5;
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      min-height: 42px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      user-select: none;
+      font-weight: 700;
+      position: relative;
+      background: white;
+    }
+
+    .given {
+      border: 2px solid #333;
+    }
+
+    .cell .coltag {
+      position: absolute;
+      bottom: 3px;
+      right: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0.7;
+    }
+
+    .muted { color: #666; }
+  </style>
 </head>
 <body>
   <h1>Numino</h1>
@@ -11,16 +70,14 @@
   <h2>Puzzles</h2>
   <div id="list">Loading…</div>
 
-  <hr />
-
-  <h2>Selected puzzle</h2>
-  <div id="details">None selected.</div>
+  <h2>Play</h2>
+  <div id="play" class="muted">Select a puzzle above.</div>
 
   <script>
     const listEl = document.getElementById("list");
-    const detailsEl = document.getElementById("details");
+    const playEl = document.getElementById("play");
 
-    function formatPuzzleLine(p) {
+    function lineFor(p) {
       const rows = p.grid?.rows ?? "?";
       const cols = p.grid?.cols ?? "?";
       const nums = (p.allowed?.numbers ?? []).join(", ");
@@ -29,21 +86,109 @@
       return `${p.id} — ${rows}×${cols} — Numbers: ${nums} — Colors: ${colsList} — Bias: ${bias}`;
     }
 
-    function showDetails(p) {
-      const rows = p.grid?.rows ?? "?";
-      const cols = p.grid?.cols ?? "?";
+    function buildGivenMap(givens) {
+      const m = new Map(); // key "r,c" -> {num, col}
+      (givens || []).forEach(g => {
+        m.set(`${g.r},${g.c}`, { num: g.num ?? null, col: g.col ?? null });
+      });
+      return m;
+    }
+
+    function renderPuzzle(p) {
+      const rows = p.grid.rows;
+      const cols = p.grid.cols;
       const nums = (p.allowed?.numbers ?? []).join(", ");
       const colsList = (p.allowed?.colors ?? []).join(" ");
       const bias = p.bias ?? "—";
 
-      detailsEl.innerHTML = `
-        <div><strong>ID:</strong> ${p.id}</div>
-        <div><strong>Grid:</strong> ${rows}×${cols}</div>
-        <div><strong>Numbers:</strong> ${nums}</div>
-        <div><strong>Colors:</strong> ${colsList}</div>
-        <div><strong>Bias:</strong> ${bias}</div>
-        <p style="margin-top:12px;"><em>Next step: this is where Play UI will render the grid.</em></p>
+      const rowSums = p.constraints?.row_sums ?? [];
+      const colSums = p.constraints?.col_sums ?? [];
+      const givenMap = buildGivenMap(p.givens);
+
+      // Build layout: (rows+1) x (cols+2)
+      // [0,0] blank | [0,1..cols] col sums | [0, cols+1] blank
+      // [1..rows, 0] blank | [1..rows,1..cols] cells | [1..rows, cols+1] row sums
+      const totalCols = cols + 2;
+      const totalRows = rows + 1;
+
+      const metaHtml = `
+        <div class="meta">
+          <div><strong>ID:</strong> ${p.id}</div>
+          <div><strong>Grid:</strong> ${rows}×${cols}</div>
+          <div><strong>Numbers:</strong> ${nums}</div>
+          <div><strong>Colors:</strong> ${colsList}</div>
+          <div><strong>Bias:</strong> ${bias}</div>
+          <div class="muted" style="margin-top:8px;">
+            (Step 1) Rendering only. Next step: interactive tools + undo.
+          </div>
+        </div>
       `;
+
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      grid.style.gridTemplateColumns = `repeat(${totalCols}, auto)`;
+      grid.style.gridTemplateRows = `repeat(${totalRows}, auto)`;
+
+      function add(el) { grid.appendChild(el); }
+
+      // Top-left blank
+      add(document.createElement("div"));
+
+      // Column sums
+      for (let c = 0; c < cols; c++) {
+        const d = document.createElement("div");
+        d.className = "sum";
+        d.textContent = (colSums[c] ?? "");
+        add(d);
+      }
+
+      // Top-right blank
+      add(document.createElement("div"));
+
+      // Rows
+      for (let r = 0; r < rows; r++) {
+        // Left blank spacer
+        add(document.createElement("div"));
+
+        // Cells
+        for (let c = 0; c < cols; c++) {
+          const key = `${r},${c}`;
+          const given = givenMap.get(key);
+
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (given) cell.classList.add("given");
+
+          const num = given?.num ?? null;
+          const colTag = given?.col ?? null;
+
+          cell.textContent = (num === null ? "" : String(num));
+
+          if (colTag) {
+            const tag = document.createElement("div");
+            tag.className = "coltag";
+            tag.textContent = colTag;
+            cell.appendChild(tag);
+          }
+
+          add(cell);
+        }
+
+        // Row sum (right)
+        const rs = document.createElement("div");
+        rs.className = "sum";
+        rs.textContent = (rowSums[r] ?? "");
+        add(rs);
+      }
+
+      playEl.innerHTML = "";
+      playEl.className = "";
+      playEl.insertAdjacentHTML("beforeend", metaHtml);
+
+      const wrap = document.createElement("div");
+      wrap.className = "board-wrap";
+      wrap.appendChild(grid);
+      playEl.appendChild(wrap);
     }
 
     fetch("puzzles.json")
@@ -61,10 +206,9 @@
         puzzles.forEach(p => {
           const li = document.createElement("li");
           const btn = document.createElement("button");
-          btn.textContent = formatPuzzleLine(p);
-          btn.style.display = "block";
-          btn.style.margin = "6px 0";
-          btn.onclick = () => showDetails(p);
+          btn.className = "puzzle-btn";
+          btn.textContent = lineFor(p);
+          btn.onclick = () => renderPuzzle(p);
           li.appendChild(btn);
           ul.appendChild(li);
         });
