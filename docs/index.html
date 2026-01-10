@@ -444,8 +444,8 @@
               const st = cellState(nr, nc);
               if (st.num === null || st.col === null) return false;
 
-              // Same-number connectivity defines the cluster
-              if (st.num === num) {
+              // Cluster connectivity is defined by same number AND same color
+              if (st.num === num && st.col === color) {
                 visited[nr][nc] = true;
                 clusterId[nr][nc] = cid;
                 stack.push([nr, nc]);
